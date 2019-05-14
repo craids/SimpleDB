@@ -1,0 +1,30 @@
+Rayden Y Chia
+Lab 1
+
+1. Design decisions
+
+Cache-based computations or pre-computation is used in some places. 
+For example, name-to-index calculations in TupleDesc and Catalog are lazily stored in 
+java.util.Map, and in the HeapFileIterator next() method, after returning a Tuple, 
+it calculates the next Tuple.
+
+2. Changes made to the API
+
+None.
+
+3. Missing or incomplete elements of your code
+
+All parts for lab 1 done.
+
+4. Time spent on the lab, and whether there was anything you
+found particularly difficult or confusing.
+
+7 hours.  Implementing BufferPool, HeapPage and HeapFile (esp. BufferPool), 
+was pretty confusing.  It was unclear which readPage methods should be using which other
+ones, and who should be directly accessing disk, and how. 
+
+The control flow hopefully could be simplified, or if not some of the hints given on Piazza
+could be included with the lab hand-out.
+
+Other than that, any confusion that came up during the lab was covered very
+thoroughly by the lab hand-out and/or the Javadocs.

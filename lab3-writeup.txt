@@ -1,0 +1,67 @@
+-----
+Describe any design decisions you made.
+
+I made minimal number of design decisions. In IntHistogram, I used an array to store 
+how many values have been added to each bucket/height as well as the total number of 
+values that have been added so far. To estimate selectivity, the approximate number 
+of sufficient values (values that satisfy the query) is found. EXAMPLE: in the case 
+of an "equals v" query, the height of the bucket containing v is divided by its width 
+to get the number of sufficient values. In every case, the number of sufficient values 
+is divided by the total number of values in order to estimate the selectivity.
+
+Bucket widths are pre-computed and stored in an array, as are the minimum values stored 
+in each bucket. These minimums are used in "<" and ">" queries because the number of 
+values <v in a bucket is estimated to be (v - minimum)/bucketWidth * bucketHeight. 
+These approximations are local bests when storing simple heights of each bucket. The 
+asymptotic runtime is O(n) where n is the number of buckets, since for ">" and "<" 
+queries it might be necessary to take a sum across O(n) buckets. This does not scale 
+with the number of added values (sub-optimal) since it's possible to store sums across 
+buckets in a tree and determine range queries in O(log(n)) time - we sacrifice the 
+small reduction in time complexity for code and algorithmic simplicity.
+
+Join cardinality estimations were done by using primary key equality conditions. I 
+took the minimum cardinality of two children result sets (or the cardinality of 
+the non-PK set if there was only one PK). Equality conditions without PKs took the 
+maximum cardinality. Inequality conditions took the product of the two cardinalities,
+estimating that on the order of very few pairs of tuples would be eliminated. ">" and
+"<" queries were assumed to eliminate 50% (on average) of candidate tuples, so the 
+returned estimated cardinality was half of the product of the two cardinalities.
+
+Join ordering was done using the provided helper methods, following the pseudo-code 
+in the lab description.
+
+FOR EXTRA CREDIT: I implemented an improved subset iterator to keep a minimal number of
+Java objects in memory. Instead of enumerating all of the subsets at once into memory, I
+created the SubsetBitsetIterator iterator class, making use of the J2SE 7 Bitset class. 
+The API stayed unmodified, but using the helper function getSubsetIterator, it only 
+iterates through subsets of a specified size. The result is a much faster ordering of 
+large join operations. EXAMPLE:
+
+[junit] Testcase: estimateJoinCostTest took 0.257 sec
+[junit] Testcase: estimateJoinCardinality took 0.195 sec
+[junit] Testcase: orderJoinsTest took 1.136 sec
+[junit] Testcase: bigOrderJoinsTest took 0.446 sec
+[junit] Testcase: nonequalityOrderJoinsTest took 0.114 sec
+
+The speedup runs much faster than the unoptimized time by about 2x.
+
+
+-----
+Discuss and justify any changes you made to the API.
+
+I made no API changes.
+
+-----
+Describe any missing or incomplete elements of your code.
+
+I did not implement (1) average selectivity and (2) the optional toString() method
+
+-----
+Describe how long you spent on the lab, and whether there was anything you
+found particularly difficult or confusing.
+
+I spent more time than expected on the lab - about 14 hours. A lot of time was spent 
+debugging the edge case when there were more buckets than possible integer values. The 
+implementation of Selinger's algorithm was difficult to grasp initially but the helper methods 
+proved useful. Once I understood the optimizer structure, driving the forward engineering to 
+completion was much easier.

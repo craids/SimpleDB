@@ -1,0 +1,27 @@
+Predicate.java: Get/set methods and Field compare method
+
+JoinPredicate.java: Field compare method
+
+Filter.java: fetchNextiterated through the child iterator, applying the predicate filter function to perform selection.
+
+Join.java: Implemented as simple nested loop join. The join is done by iterating through the values of the column of the first join field and using the predicate to determine if it should join based on the join field on the right. If so, a new TupleDesc is made and the two corresponding tuples are merged.
+
+IntegerAggregator.java and StringAggregator.java: The IntegerAggregator was implemented using a HashMap, mapping the group to values. The mergeTupleIntoGroup function would add the new tuple values into the map in constant time. The StringAggregator was implemented in the same way, but only supports count. 
+
+Aggregate.java: Aggregate uses the Aggregators by grouping and doing the aggregate calculations for all the tuples in the child iterator.
+
+HeapPage.java: insertTuple does a linear search of the page. deleteTuple gets the recordId from the tuple to be deleted and removes it from the tuple array and updates the header.
+
+HeapFile.java: insertTuple does a linear search through the file for a page with a free slot and if it does not find one, creates a new page, inserts the tuple into that page (with HeapPage's insertTuple) and appends it to the file. deleteTuple determines the pageId from the tuple to be deleted and uses HeapPage's deleteTuple function to delete the tuple.
+
+Insert.java, Delete.java: fetchNext is implemented by iterating through the child iterator and using the BufferPool insert/deleteTuple function (described later).
+
+BufferPool.java: insertTuple and deleteTuple make use of HeapFile.java's insert and deleteTuple functions.
+
+Page Eviction Policy: We evict a random clean page. Though simple to implement and easy to understand, it is not optimized for performance at all. Can be improved on.
+
+Changes to API: None were made.
+
+Missing elements: All the unit/system tests passed.
+
+Time: The lab took about 12 hours. 

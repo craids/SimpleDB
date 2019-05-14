@@ -1,0 +1,77 @@
+Design Decisions:
+
+I wrote a LockManager class with a factory construct (the constructor is 
+private, which allows for a singleton construct) that handles all locking 
+outside of the BufferPool. A singleton instance of the LockManager is held 
+and delegated to by the BufferPool.
+ 
+LockManager.java keeps track of two maps: (1) shared lock map: a map of 
+PageId -> list(TransactionId) that have a shared lock on a page, and (2) an 
+exclusive lock map of PageId -> TransactionId that have an exclusive lock on 
+a page. A ConcurrentMap of locks (by PageId) is used when updating these 
+mappings. I make use of "synchronized" blocks on these Java locks ensure that 
+conflicting updates to the maps do not occur.  For convenience, the 
+LockManager keeps a map of TransactionIds to the PageIds whose locks they 
+possess, so that upon transaction commit (completion) the locks may be 
+released efficiently. Carefully isolating the locking protocol in a separate 
+class through good object-oriented programming practices and made for 
+maintainable writing of the code.
+
+I also made a few variables needed to become thread-safe, such as the 
+counters in HeapFile and BufferPool for the number of pages they have, which 
+was achieved with the use of AtomicIntegers.
+
+HeapFile was modified to only request read access of pages when searching for
+ an empty tuple slot (in insertTuple), only requesting read-write access if 
+an empty slot is found by probing with tryInsertTuple. If the empty slot is 
+not found, the page is actually released via the releasePage(TransactionId, 
+PageId) call, which is safe here because the empty tuple slot search makes no 
+changes, and foregoing 2PL will not cause deadlock because no locks are 
+acquired between the acquisition and release of the single, read-only lock.
+
+Transactions abort themselves if they are waiting on a lock in such a way 
+that creates deadlock. This is achieved with a lock dependency graph in a 
+ConcurrentMap inside LockManager. Whenever a lock acquisition request finds 
+itself in conflict with another transaction already holding the lock, the 
+transaction lock acquisition dependencies is updated. When it is updated, a 
+depth-first search is done over the graph starting from every node looking 
+for directed cycles; if a directed cycle is found then a 
+TransactionAbortedException is thrown.  The search results are cached so that 
+every node is only searched once, which gives an O(E+V) runtime. This way, 
+the most frequent searches that occur during heavy lock contention will slow 
+down the LockManager as little as possible.
+
+---
+
+Discuss and justify any changes you made to the API
+
+No API changes were made.
+
+---
+
+Describe any missing or incomplete elements of your code
+
+The code satisfies all of the desired features.
+
+---
+
+Bonus Question
+
+I tried another design choice with regards to deadlock detection and remediation.
+Instead of aborting oneself when a deadlock is detected in the graph, I tried 
+aborting all others in the cycle. This turned out to be a really bad 
+strategy since TransactionTest took between 500-700 seconds on average to complete. 
+It makes sense since whenever there is a cyclic lock contention, the operation 
+becomes very single-threaded. In contrast, aborting oneself was much faster,
+with an average completion of 20-200 seconds.
+
+---
+
+Describe how long you spent on the lab, and whether there was anything you
+found particularly difficult or confusing
+
+Debugging TransactionTest was very painful. The worst bug I had involved the 
+way I wrote to files, which I immediately attributed to a race condition in 
+my locking code. Debugging it took about 4 hours, which in the end turned out 
+to be correct.
+
